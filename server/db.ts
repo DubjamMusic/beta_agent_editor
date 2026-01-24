@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, documents, documentPermissions, documentVersions, userPresence, documentHistory } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +89,153 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// Document queries
+export async function createDocument(title: string, ownerId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(documents).values({
+    title,
+    ownerId,
+    content: "",
+  });
+  
+  return result;
+}
+
+export async function getDocument(documentId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(documents).where(eq(documents.id, documentId)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function updateDocumentContent(documentId: number, content: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return await db.update(documents).set({ content }).where(eq(documents.id, documentId));
+}
+
+export async function getUserDocuments(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return await db.select().from(documents).where(eq(documents.ownerId, userId));
+}
+
+// Permission queries
+export async function grantPermission(documentId: number, userId: number, role: "view" | "edit" | "admin", grantedBy: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return await db.insert(documentPermissions).values({
+    documentId,
+    userId,
+    role,
+    grantedBy,
+  });
+}
+
+export async function getUserPermission(documentId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(documentPermissions).where(
+    and(eq(documentPermissions.documentId, documentId), eq(documentPermissions.userId, userId))
+  ).limit(1);
+  
+  return result.length > 0 ? result[0] : null;
+}
+
+// Version queries
+export async function createVersion(documentId: number, content: string, createdBy: number, description?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Get the latest version number
+  const latestVersion = await db.select().from(documentVersions)
+    .where(eq(documentVersions.documentId, documentId))
+    .orderBy((t) => t.versionNumber)
+    .limit(1);
+  
+  const versionNumber = (latestVersion[0]?.versionNumber ?? 0) + 1;
+  
+  return await db.insert(documentVersions).values({
+    documentId,
+    versionNumber,
+    content,
+    createdBy,
+    description,
+  });
+}
+
+export async function getDocumentVersions(documentId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return await db.select().from(documentVersions).where(eq(documentVersions.documentId, documentId));
+}
+
+// Presence queries
+export async function updatePresence(userId: number, documentId: number, cursorPosition: number, isTyping: boolean) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const existing = await db.select().from(userPresence).where(
+    and(eq(userPresence.userId, userId), eq(userPresence.documentId, documentId))
+  ).limit(1);
+  
+  if (existing.length > 0) {
+    return await db.update(userPresence).set({
+      cursorPosition,
+      isTyping: isTyping ? 1 : 0,
+    }).where(
+      and(eq(userPresence.userId, userId), eq(userPresence.documentId, documentId))
+    );
+  } else {
+    return await db.insert(userPresence).values({
+      userId,
+      documentId,
+      cursorPosition,
+      isTyping: isTyping ? 1 : 0,
+    });
+  }
+}
+
+export async function getDocumentPresence(documentId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return await db.select().from(userPresence).where(eq(userPresence.documentId, documentId));
+}
+
+export async function removePresence(userId: number, documentId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return await db.delete(userPresence).where(
+    and(eq(userPresence.userId, userId), eq(userPresence.documentId, documentId))
+  );
+}
+
+// History queries
+export async function addHistory(documentId: number, userId: number, operation: string, contentDelta?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return await db.insert(documentHistory).values({
+    documentId,
+    userId,
+    operation,
+    contentDelta,
+  });
+}
+
+export async function getDocumentHistory(documentId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return await db.select().from(documentHistory).where(eq(documentHistory.documentId, documentId));
+}
