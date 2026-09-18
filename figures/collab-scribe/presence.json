@@ -1,0 +1,12 @@
+{
+  "figure": "collab-scribe",
+  "wave": "2026-09-18-c-circuit",
+  "actors": [
+    {
+      "actorId": "scribe-local-01",
+      "path": "figures/collab-scribe/presence.json",
+      "lastSeenIso": "2026-09-18T16:40:00Z",
+      "lock": { "heldBy": "scribe-local-01", "note": "wave-c contract authoring" }
+    }
+  ]
+}
