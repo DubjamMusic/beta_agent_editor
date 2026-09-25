@@ -1,0 +1,18 @@
+{
+  "figureId": "glyph-scribe",
+  "codename": "GLYPH-SCRIBE-25",
+  "waveId": "2026-09-25-j-keel",
+  "repo": "DubjamMusic/beta_agent_editor",
+  "role": "Bind the collaborative presence glyph as a scored lock card.",
+  "knowledge": [
+    "client/src/components is the editor surface, not this wave's rewrite target",
+    "Glyph is a density card, not a Yjs rewrite",
+    "Chat-tooling drift stays on a separate issue"
+  ],
+  "sample": {"N": 7.6, "V": 8.4, "S": 7.8, "D": 8.1},
+  "weights": {"N": 0.30, "V": 0.20, "S": 0.20, "D": 0.30},
+  "expectedDensity": 7.944,
+  "bannedTokens": ["planner", "executor", "monitor", "data_agent"],
+  "predecessorNotThisWave": "collab-scribe",
+  "mergePolicy": "pr-only"
+}
